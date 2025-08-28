@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/db'
 import Order from '@/models/Order'
 import { stripe } from '@/lib/stripe'
-import { pusherServer } from '@/lib/pusher'
+import { getPusherServer } from '@/lib/pusher'
 
 export async function POST(
   request: NextRequest,
@@ -49,27 +49,30 @@ export async function POST(
         
         // Trigger real-time updates
         try {
-          // Broadcast to kitchen display for paid orders
-          await pusherServer.trigger('kitchen', 'kitchen.order_paid', {
-            orderId: order._id.toString(),
-            customerName: order.customerName,
-            tableNumber: order.tableNumber,
-            phone: order.customerPhone,
-            email: order.customerEmail,
-            items: order.items,
-            totalCents: order.totalCents,
-            orderNotes: order.orderNotes,
-            createdAt: order.createdAt,
-          });
+          const pusherServer = getPusherServer();
+          if (pusherServer) {
+            // Broadcast to kitchen display for paid orders
+            await pusherServer.trigger('kitchen', 'kitchen.order_paid', {
+              orderId: order._id.toString(),
+              customerName: order.customerName,
+              tableNumber: order.tableNumber,
+              phone: order.customerPhone,
+              email: order.customerEmail,
+              items: order.items,
+              totalCents: order.totalCents,
+              orderNotes: order.orderNotes,
+              createdAt: order.createdAt,
+            });
 
-          // Broadcast to admin panel
-          await pusherServer.trigger('admin', 'admin.order_paid', {
-            orderId: order._id.toString(),
-            status: 'CONFIRMED',
-            paymentStatus: 'PAID',
-          });
+            // Broadcast to admin panel
+            await pusherServer.trigger('admin', 'admin.order_paid', {
+              orderId: order._id.toString(),
+              status: 'CONFIRMED',
+              paymentStatus: 'PAID',
+            });
 
-          console.log('Check payment API: Real-time updates triggered');
+            console.log('Check payment API: Real-time updates triggered');
+          }
         } catch (error) {
           console.error('Check payment API: Error triggering real-time updates:', error);
           // Don't fail the payment check if real-time updates fail

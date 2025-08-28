@@ -4,7 +4,7 @@ import dbConnect from '@/lib/db';
 import Order from '@/models/Order';
 import CustomerLead from '@/models/CustomerLead';
 import { stripe } from '@/lib/stripe';
-import { pusherServer } from '@/lib/pusher';
+import { getPusherServer } from '@/lib/pusher';
 
 const checkoutSchema = z.object({
   items: z.array(z.object({
@@ -195,26 +195,29 @@ export async function POST(request: NextRequest) {
     console.log('Checkout API: Triggering real-time updates...');
     try {
       // Broadcast to admin panel
-      await pusherServer.trigger('admin', 'admin.new_order', {
-        orderId: order._id.toString(),
-        customerName: customerLead.name,
-        tableNumber: customerLead.tableNumber || '1',
-        phone: customerLead.phone || 'No Phone',
-        email: customerLead.email || 'No Email',
-        items: orderItems,
-        totalCents: order.totalCents,
-        status: order.status,
-        paymentStatus: order.paymentStatus,
-        discountCode: voucherCode || undefined,
-        discountCents: discountCents,
-        orderNotes: orderNotes,
-        createdAt: order.createdAt,
-      });
+      const pusherServer = getPusherServer();
+      if (pusherServer) {
+        await pusherServer.trigger('admin', 'admin.new_order', {
+          orderId: order._id.toString(),
+          customerName: customerLead.name,
+          tableNumber: customerLead.tableNumber || '1',
+          phone: customerLead.phone || 'No Phone',
+          email: customerLead.email || 'No Email',
+          items: orderItems,
+          totalCents: order.totalCents,
+          status: order.status,
+          paymentStatus: order.paymentStatus,
+          discountCode: voucherCode || undefined,
+          discountCents: discountCents,
+          orderNotes: orderNotes,
+          createdAt: order.createdAt,
+        });
 
-      // Note: Kitchen will only receive orders when they are paid (via Stripe webhook)
-      // This prevents showing unpaid orders in the kitchen display
+        // Note: Kitchen will only receive orders when they are paid (via Stripe webhook)
+        // This prevents showing unpaid orders in the kitchen display
 
-      console.log('Checkout API: Real-time updates triggered successfully');
+        console.log('Checkout API: Real-time updates triggered successfully');
+      }
     } catch (error) {
       console.error('Checkout API: Error triggering real-time updates:', error);
       // Don't fail the checkout if real-time updates fail

@@ -1,5 +1,5 @@
 # Qart - QR Ordering System
-Developed By Daniyal
+Developed By Daniyal Hassan
 A modern, production-ready MVP for restaurant QR ordering with real-time kitchen display and admin management.
 
 ## 🚀 Features

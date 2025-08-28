@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Clock, User, MessageSquare, ChefHat, LogIn, Lock, Eye, EyeOff } from 'lucide-react';
 import { signIn, useSession } from 'next-auth/react';
 import { useCustomerSession } from '../contexts/CustomerSessionContext';
-import { pusherClient } from '@/lib/pusher';
+import { getPusherClient } from '@/lib/pusher-client';
 
 interface OrderItem {
   productId: string;
@@ -206,6 +206,9 @@ export default function KitchenPage() {
     fetchOrders();
 
     // Set up real-time updates with Pusher
+    const pusherClient = getPusherClient();
+    if (!pusherClient) return;
+    
     const channel = pusherClient.subscribe('kitchen');
     
     // Debug Pusher connection

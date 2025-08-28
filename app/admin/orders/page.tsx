@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 
 import { Search, Eye, Calendar, User, Hash } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { pusherClient } from '@/lib/pusher'
+import { getPusherClient } from '@/lib/pusher-client'
 
 interface OrderItem {
   name: string
@@ -43,6 +43,9 @@ export default function AdminOrdersPage() {
     fetchOrders()
 
     // Set up real-time updates with Pusher
+    const pusherClient = getPusherClient();
+    if (!pusherClient) return;
+    
     const channel = pusherClient.subscribe('admin');
     
     // Debug: Listen to all events on the channel

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
-import { pusherServer } from '@/lib/pusher'
+import { getPusherServer } from '@/lib/pusher'
 import dbConnect from '@/lib/db'
 import Order from '@/models/Order'
 import CustomerLead from '@/models/CustomerLead'
@@ -78,34 +78,37 @@ export async function POST(request: NextRequest) {
           
           // Broadcast to kitchen display for paid orders
           console.log('Stripe webhook: Broadcasting to kitchen...');
-          await pusherServer.trigger('kitchen', 'kitchen.order_paid', {
-            orderId: order._id.toString(),
-            customerName: order.customerName,
-            tableNumber: order.tableNumber,
-            phone: order.customerPhone,
-            email: order.customerEmail,
-            items: order.items,
-            totalCents: order.totalCents,
-            orderNotes: order.orderNotes,
-            createdAt: order.createdAt,
-          })
+          const pusherServer = getPusherServer();
+          if (pusherServer) {
+            await pusherServer.trigger('kitchen', 'kitchen.order_paid', {
+              orderId: order._id.toString(),
+              customerName: order.customerName,
+              tableNumber: order.tableNumber,
+              phone: order.customerPhone,
+              email: order.customerEmail,
+              items: order.items,
+              totalCents: order.totalCents,
+              orderNotes: order.orderNotes,
+              createdAt: order.createdAt,
+            })
 
-          // Broadcast to admin panel for order status update
-          console.log('Stripe webhook: Broadcasting to admin...');
-          await pusherServer.trigger('admin', 'admin.order_paid', {
-            orderId: order._id.toString(),
-            status: 'CONFIRMED',
-            paymentStatus: 'PAID',
-          })
+            // Broadcast to admin panel for order status update
+            console.log('Stripe webhook: Broadcasting to admin...');
+            await pusherServer.trigger('admin', 'admin.order_paid', {
+              orderId: order._id.toString(),
+              status: 'CONFIRMED',
+              paymentStatus: 'PAID',
+            })
 
-          // Broadcast to order-specific channel
-          console.log('Stripe webhook: Broadcasting to order channel...');
-          await pusherServer.trigger(`order:${order._id}`, 'order.paid', {
-            orderId: order._id.toString(),
-            status: 'PAID',
-          })
-          
-          console.log('Stripe webhook: All broadcasts completed successfully');
+            // Broadcast to order-specific channel
+            console.log('Stripe webhook: Broadcasting to order channel...');
+            await pusherServer.trigger(`order:${order._id}`, 'order.paid', {
+              orderId: order._id.toString(),
+              status: 'PAID',
+            })
+            
+            console.log('Stripe webhook: All broadcasts completed successfully');
+          }
         } else {
           console.log('Stripe webhook: Failed to update order - order not found');
         }

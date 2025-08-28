@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { CheckCircle, Clock } from 'lucide-react'
 
 import { formatCurrency, formatDate } from '@/lib/utils'
-import { pusherClient } from '@/lib/pusher'
+import { getPusherClient } from '@/lib/pusher-client'
 import { useCustomerSession } from '../../../contexts/CustomerSessionContext'
 
 interface OrderItem {
@@ -123,6 +123,9 @@ export default function OrderConfirmPage() {
   }
 
   const setupPusher = () => {
+    const pusherClient = getPusherClient();
+    if (!pusherClient) return () => {};
+    
     const channel = pusherClient.subscribe(`order:${orderId}`)
     
     channel.bind('order.paid', (data: any) => {
